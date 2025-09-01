@@ -1,36 +1,24 @@
-use std::io;
+mod keyhandling;
+mod render;
+mod run;
+use std::process;
 
-use futures::{Sink, SinkExt, StreamExt};
+use ratatui::crossterm;
 use tokio_tungstenite::connect_async;
-use tungstenite::Message;
 
 #[tokio::main]
-async fn main() {
-    let url = "ws://localhost:3113/websocket";
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let url = "ws://localhost:3113/chat";
 
     let (mut socket, _) = connect_async(url)
         .await
         .expect("Couldn't connect to websocket");
 
-    loop {
-        let mut input = String::new();
-
-        io::stdin().read_line(&mut input).expect("Cant read input");
-        let input = input.trim();
-
-        socket
-            .send(Message::Text(input.into()))
-            .await
-            .expect("Cant send message");
-
-        if let Some(msg) = socket.next().await {
-            match msg {
-                Ok(Message::Text(text)) => println!("Recieved: {text}"),
-                Ok(_) => {}
-                Err(e) => {
-                    eprintln!("Error: {e}")
-                }
-            }
-        }
-    }
+    color_eyre::install()?;
+    crossterm::terminal::enable_raw_mode()?;
+    let terminal = ratatui::init();
+    let _ = run::run(terminal);
+    ratatui::restore();
+    crossterm::terminal::disable_raw_mode()?;
+    process::exit(0);
 }
