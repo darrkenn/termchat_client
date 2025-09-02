@@ -15,10 +15,12 @@ pub async fn websocket_reader(
                 let mut msgs = messages.lock().unwrap();
                 msgs.push(text.to_string());
             }
+            Ok(Message::Close(reason)) => {
+                break;
+            }
             Ok(_) => {}
             Err(e) => {
-                let mut msgs = messages.lock().unwrap();
-                msgs.push(format!("Error: {}", e).to_string());
+                break;
             }
         }
     }

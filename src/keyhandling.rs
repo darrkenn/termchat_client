@@ -1,8 +1,11 @@
-use ratatui::crossterm::event::{self, KeyEvent, KeyEventKind};
-use tokio::sync::mpsc;
-use tungstenite::Message;
+use ratatui::{
+    crossterm::event::{self, KeyEvent, KeyEventKind},
+    widgets::ListState,
+};
 
-pub fn handle_key(key: KeyEvent, tx: &mpsc::Sender<Message>, msg_buffer: &mut String) -> bool {
+use crate::app::{App, Scene};
+
+pub fn handle_key(key: KeyEvent, app: &mut App) -> bool {
     if key.kind != KeyEventKind::Press {
         return false;
     }
@@ -10,18 +13,42 @@ pub fn handle_key(key: KeyEvent, tx: &mpsc::Sender<Message>, msg_buffer: &mut St
         event::KeyCode::Esc => {
             return true;
         }
-        event::KeyCode::Enter => {
-            if !msg_buffer.trim().is_empty() {
-                let msg = Message::Text(msg_buffer.clone().into());
-                let _ = tx.try_send(msg);
-                msg_buffer.clear();
-            }
-        }
-        event::KeyCode::Backspace => {
-            msg_buffer.pop();
-        }
-        event::KeyCode::Char(char) => msg_buffer.push(char),
         _ => {}
     }
+
+    match app.scene {
+        Scene::Menu => handle_menu_key(key, app),
+        Scene::Message => handle_message_key(key),
+        Scene::Settings => handle_settings_key(key),
+    }
+
     false
+}
+
+fn handle_menu_key(key: KeyEvent, app: &mut App) {
+    match key.code {
+        event::KeyCode::Up => {
+            if let Some(list_state) = app.list_state.as_mut() {
+                list_state.select_previous();
+            }
+        }
+        event::KeyCode::Down => {
+            if let Some(list_state) = app.list_state.as_mut() {
+                list_state.select_next();
+            }
+        }
+        _ => {}
+    }
+}
+
+fn handle_message_key(key: KeyEvent) {
+    match key.code {
+        _ => {}
+    }
+}
+
+fn handle_settings_key(key: KeyEvent) {
+    match key.code {
+        _ => {}
+    }
 }

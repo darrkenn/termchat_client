@@ -7,8 +7,8 @@ use ratatui::{
 
 pub fn render_message_area(
     frame: &mut Frame,
-    messages: &[String],
     area: Rect,
+    messages: &[String],
     msg_buffer: &mut String,
 ) {
     let vertical_chunks = Layout::new(
