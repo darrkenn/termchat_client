@@ -25,10 +25,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         list: Some(Vec::<ListItem>::new()),
         connection_state: None,
         msg_buffer: "".to_string(),
-        messages: None,
+        server: None,
     };
 
-    app.update_list();
+    app.update_scene();
 
     color_eyre::install()?;
     crossterm::terminal::enable_raw_mode()?;

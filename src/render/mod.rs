@@ -1,4 +1,5 @@
-pub mod menu_area;
+mod connect_area;
+mod menu_area;
 mod message_area;
 pub mod render;
-pub mod settings_area;
+mod settings_area;
