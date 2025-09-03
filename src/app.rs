@@ -1,7 +1,4 @@
-use std::{
-    panic,
-    sync::{Arc, Mutex},
-};
+use std::sync::{Arc, Mutex};
 
 use ratatui::widgets::{ListItem, ListState};
 use reqwest::header::CONTENT_TYPE;
@@ -9,6 +6,7 @@ use serde::Deserialize;
 
 pub enum Connection {
     Connected,
+    Request(String),
     Error(String),
     Close,
 }
@@ -31,7 +29,7 @@ pub struct App<'a> {
     pub scene: Scene,
     pub list_state: Option<ListState>,
     pub list: Option<Vec<ListItem<'a>>>,
-    pub connection_state: Option<Connection>,
+    pub connection_state: Option<Arc<Mutex<Connection>>>,
     pub msg_buffer: String,
     pub server: Option<Server>,
 }
