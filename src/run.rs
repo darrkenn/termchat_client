@@ -4,7 +4,7 @@ use ratatui::{
 };
 use std::time::Duration;
 
-use crate::{app::App, keyhandling::handle_key, render::render::render};
+use crate::{app::App, keyhandling::handle_key, render::render};
 
 pub fn run(mut terminal: DefaultTerminal, mut app: App) -> color_eyre::Result<()> {
     loop {

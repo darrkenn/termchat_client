@@ -39,8 +39,8 @@ pub fn render_menu_area(frame: &mut Frame, area: Rect, app: &mut App) {
     if let (Some(list), Some(list_state)) = (app.list.as_ref(), app.list_state.as_mut()) {
         let list_area = center(
             chunks[1],
-            Constraint::Percentage(20),
-            Constraint::Percentage(20),
+            Constraint::Percentage(80),
+            Constraint::Percentage(50),
         );
 
         let list = List::new(list.clone()).highlight_style(Style::new().fg(Color::Cyan).bold());

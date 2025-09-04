@@ -1,6 +1,10 @@
 use std::sync::{Arc, Mutex};
 
-use ratatui::widgets::{ListItem, ListState};
+use ratatui::{
+    layout::Alignment,
+    text::Line,
+    widgets::{ListItem, ListState},
+};
 use reqwest::header::CONTENT_TYPE;
 use serde::Deserialize;
 use tokio::sync::mpsc;
@@ -57,9 +61,9 @@ impl App<'_> {
         match &self.scene {
             Scene::Menu => {
                 self.list = Some(vec![
-                    ListItem::new("Connect"),
-                    ListItem::new("Saved"),
-                    ListItem::new("Settings"),
+                    ListItem::from(Line::from("Connect").alignment(Alignment::Center)),
+                    ListItem::from(Line::from("Saved").alignment(Alignment::Center)),
+                    ListItem::from(Line::from("Settings").alignment(Alignment::Center)),
                 ]);
                 if let Some(list_state) = self.list_state.as_mut() {
                     list_state.select_first();
@@ -67,14 +71,19 @@ impl App<'_> {
                 self.server = None;
             }
             Scene::Settings => {
-                self.list = Some(vec![ListItem::new("Manage Accounts")]);
+                self.list = Some(vec![ListItem::from(
+                    Line::from("Manage saved").alignment(Alignment::Center),
+                )]);
                 if let Some(list_state) = self.list_state.as_mut() {
                     list_state.select_first();
                 };
             }
             Scene::Connect(connect_scene) => match connect_scene {
                 Connect::Menu => {
-                    self.list = Some(vec![ListItem::new("Connect"), ListItem::new("Info")]);
+                    self.list = Some(vec![
+                        ListItem::from(Line::from("Connect").alignment(Alignment::Center)),
+                        ListItem::from(Line::from("Info").alignment(Alignment::Center)),
+                    ]);
                     if let Some(list_state) = self.list_state.as_mut() {
                         list_state.select_first();
                     };
