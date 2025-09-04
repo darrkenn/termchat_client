@@ -21,6 +21,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         connection_state: None,
         msg_buffer: "".to_string(),
         server: None,
+        socket_writer: None,
     };
 
     app.update_scene();

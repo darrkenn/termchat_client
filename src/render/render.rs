@@ -16,15 +16,8 @@ pub fn render(frame: &mut Frame, app: &mut App) {
 
     let inner_area = Layout::default()
         .direction(Direction::Horizontal)
-        .margin(1)
-        .constraints([Constraint::Min(1)])
+        .constraints([Constraint::Fill(1)])
         .split(area)[0];
-
-    let vertical_chunks = Layout::new(
-        Direction::Horizontal,
-        [Constraint::Percentage(60), Constraint::Percentage(40)],
-    )
-    .split(inner_area);
 
     let scene = app.scene.clone();
     match scene {

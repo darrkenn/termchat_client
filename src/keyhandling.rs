@@ -1,6 +1,15 @@
-use ratatui::crossterm::event::{self, KeyEvent, KeyEventKind};
+use std::sync::Arc;
 
-use crate::app::{App, Connect, Scene};
+use futures::{StreamExt, executor::block_on};
+use ratatui::crossterm::event::{self, KeyEvent, KeyEventKind};
+use tokio::sync::mpsc;
+use tokio_tungstenite::connect_async;
+use tungstenite::{Message, connect};
+
+use crate::{
+    app::{App, Connect, Scene},
+    websocket::{websocket_reader, websocket_writer},
+};
 
 const MENU_OPTIONS: [&str; 3] = ["Connect", "Saved", "Settings"];
 const CONNECT_OPTIONS: [&str; 2] = ["Connect", "Info"];
@@ -91,6 +100,43 @@ fn handle_connect_key(key: KeyEvent, app: &mut App, connect_scene: Connect) {
                         "Connect" => {
                             app.scene = Scene::Connect(Connect::Connecting);
                             app.update_scene();
+
+                            let url = get_url(app.msg_buffer.clone());
+                            let server = app.server.clone();
+                            let connection_state = app.connection_state.clone();
+
+                            let (tx, rx) = mpsc::channel::<Message>(12);
+                            app.socket_writer = Some(tx);
+
+                            tokio::spawn(async move {
+                                match connect_async(url).await {
+                                    Ok((socket, _)) => {
+                                        let (ws_w, ws_r) = socket.split();
+
+                                        if let (Some(server), Some(connection_state)) =
+                                            (server, connection_state)
+                                        {
+                                            if let Some(messages) = &server.messages {
+                                                let messages_reader = Arc::clone(messages);
+                                                tokio::spawn(async move {
+                                                    websocket_reader(
+                                                        messages_reader,
+                                                        ws_r,
+                                                        connection_state,
+                                                    )
+                                                    .await;
+                                                });
+                                                tokio::spawn(async move {
+                                                    websocket_writer(ws_w, rx);
+                                                });
+                                            };
+                                        }
+                                    }
+                                    Err(e) => {
+                                        eprintln!("{e}")
+                                    }
+                                }
+                            });
                         }
                         "Info" => {
                             app.scene = Scene::Connect(Connect::Info);
@@ -120,5 +166,24 @@ fn handle_connect_key(key: KeyEvent, app: &mut App, connect_scene: Connect) {
             _ => {}
         },
         Connect::Connecting => {}
+    }
+}
+
+fn get_url(mut msg_buffer: String) -> String {
+    if msg_buffer.starts_with("ws://") || msg_buffer.starts_with("wss://") {
+    } else if msg_buffer.starts_with("http://") {
+        msg_buffer = msg_buffer.replace("http://", "ws://");
+    } else if msg_buffer.starts_with("https://") {
+        msg_buffer = msg_buffer.replace("https://", "wss://");
+    };
+
+    if msg_buffer.ends_with("/") {
+        msg_buffer.push_str("chat");
+        msg_buffer
+    } else if !msg_buffer.ends_with("/chat") {
+        msg_buffer.push_str("/chat");
+        msg_buffer
+    } else {
+        msg_buffer
     }
 }

@@ -3,6 +3,8 @@ use std::sync::{Arc, Mutex};
 use ratatui::widgets::{ListItem, ListState};
 use reqwest::header::CONTENT_TYPE;
 use serde::Deserialize;
+use tokio::sync::mpsc;
+use tungstenite::Message;
 
 pub enum Connection {
     Connected,
@@ -32,8 +34,10 @@ pub struct App<'a> {
     pub connection_state: Option<Arc<Mutex<Connection>>>,
     pub msg_buffer: String,
     pub server: Option<Server>,
+    pub socket_writer: Option<mpsc::Sender<Message>>,
 }
 
+#[derive(Clone)]
 pub struct Server {
     pub info: Option<Arc<Mutex<Info>>>,
     pub messages: Option<Arc<Mutex<Vec<String>>>>,

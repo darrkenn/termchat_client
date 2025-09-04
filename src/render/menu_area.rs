@@ -17,7 +17,7 @@ const ASCII: &str = r#"
 "#;
 
 pub fn render_menu_area(frame: &mut Frame, area: Rect, app: &mut App) {
-    let area = center(area, Constraint::Percentage(30), Constraint::Percentage(40));
+    let area = center(area, Constraint::Percentage(30), Constraint::Percentage(50));
 
     let title = Paragraph::new(ASCII)
         .style(Style::default().fg(Color::Cyan))
