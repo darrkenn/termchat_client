@@ -4,10 +4,11 @@ use ratatui::{
 };
 
 use crate::{
-    app::{App, Connect, Scene},
+    app::{App, Scene},
     render::{
-        connect_area::render_connect_area, menu_area::render_menu_area,
-        message_area::render_message_area, settings_area::render_settings_area,
+        connect_area::render_connect_area, connecting_area::render_connecting,
+        menu_area::render_menu_area, message_area::render_message_area,
+        settings_area::render_settings_area,
     },
 };
 
@@ -32,6 +33,7 @@ pub fn render(frame: &mut Frame, app: &mut App) {
                 }
             }
         }
+        Scene::Connecting => render_connecting(frame, area, app),
     }
 }
 

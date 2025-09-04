@@ -1,4 +1,7 @@
-use std::sync::{Arc, Mutex};
+use std::{
+    panic,
+    sync::{Arc, Mutex},
+};
 
 use futures::{StreamExt, stream::SplitStream};
 use serde_json::Value;
@@ -52,10 +55,14 @@ pub async fn websocket_reader(
                 }
             }
             Ok(Message::Close(_)) => {
+                panic!("Closed");
                 break;
             }
-            Ok(_) => {}
-            Err(_) => {
+            Ok(ok) => {
+                panic!("{ok}");
+            }
+            Err(e) => {
+                panic!("{e}");
                 break;
             }
         }

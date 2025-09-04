@@ -1,4 +1,5 @@
 mod connect;
+mod connecting;
 mod keyhandling;
 mod menu;
 mod message;

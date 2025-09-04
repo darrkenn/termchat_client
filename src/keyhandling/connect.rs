@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{panic, sync::Arc};
 
 use futures::StreamExt;
 use ratatui::crossterm::event::{self, KeyEvent};
@@ -31,7 +31,7 @@ pub fn handle_connect_key(key: KeyEvent, app: &mut App, connect_scene: Connect) 
                     let selection = CONNECT_OPTIONS[i.selected().unwrap()];
                     match selection {
                         "Connect" => {
-                            app.scene = Scene::Connect(Connect::Connecting);
+                            app.scene = Scene::Connecting;
                             app.update_scene();
 
                             let url = get_url(app.msg_buffer.clone());
@@ -89,7 +89,7 @@ pub fn handle_connect_key(key: KeyEvent, app: &mut App, connect_scene: Connect) 
         },
         Connect::Info => match key.code {
             event::KeyCode::Char('c') => {
-                app.scene = Scene::Connect(Connect::Connecting);
+                app.scene = Scene::Connecting;
                 app.update_scene();
             }
             event::KeyCode::Enter => {
@@ -98,7 +98,6 @@ pub fn handle_connect_key(key: KeyEvent, app: &mut App, connect_scene: Connect) 
             }
             _ => {}
         },
-        Connect::Connecting => {}
     }
 }
 
