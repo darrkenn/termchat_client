@@ -1,4 +1,5 @@
 use ratatui::crossterm::event::{self, KeyEvent};
+use tungstenite::Message;
 
 use crate::app::App;
 
@@ -9,7 +10,16 @@ pub fn handle_connecting_key(key: KeyEvent, app: &mut App) {
             app.msg_buffer.pop();
         }
         event::KeyCode::Enter => {
-            panic!("{}", app.msg_buffer.clone())
+            let message = app.msg_buffer.trim();
+
+            if !message.is_empty() {
+                if let Some(writer) = &app.socket_writer {
+                    let message = format!(r#"{{"type":"response","username","{}"}}"#, message);
+                    let message = Message::Text(message.into());
+                    let _ = writer.try_send(message);
+                }
+                app.msg_buffer.clear();
+            }
         }
         _ => {}
     }

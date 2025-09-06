@@ -34,7 +34,6 @@ pub fn render_connecting(frame: &mut Frame, area: Rect, app: &mut App) {
         match connection_state {
             Connection::Request(request) => match request.as_str() {
                 "username" => {
-                    app.msg_buffer.clear();
                     let input = Paragraph::new(app.msg_buffer.clone())
                         .centered()
                         .wrap(Wrap { trim: false });

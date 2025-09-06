@@ -12,11 +12,9 @@ pub fn handle_key(key: KeyEvent, app: &mut App) -> bool {
     if key.kind != KeyEventKind::Press {
         return false;
     }
-    match key.code {
-        event::KeyCode::Esc => {
-            return true;
-        }
-        _ => {}
+
+    if key.code == event::KeyCode::Esc {
+        return true;
     }
 
     let scene = app.scene.clone();

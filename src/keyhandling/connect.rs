@@ -32,6 +32,7 @@ pub fn handle_connect_key(key: KeyEvent, app: &mut App, connect_scene: Connect) 
                     match selection {
                         "Connect" => {
                             handle_connection(app);
+                            app.msg_buffer.clear();
                         }
                         "Info" => {
                             app.scene = Scene::Connect(Connect::Info);
@@ -105,7 +106,7 @@ fn handle_connection(app: &mut App) {
                             websocket_reader(messages_reader, ws_r, connection_state).await;
                         });
                         tokio::spawn(async move {
-                            websocket_writer(ws_w, rx);
+                            websocket_writer(ws_w, rx).await;
                         });
                     };
                 }
