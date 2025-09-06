@@ -99,7 +99,7 @@ impl App<'_> {
                     };
                     self.server = Some(Server {
                         info: Some(Arc::new(Mutex::new(info))),
-                        messages: None,
+                        messages: Some(Arc::new(Mutex::new(Vec::<String>::new()))),
                         ip: Some(self.msg_buffer.clone()),
                     });
                     if let Some(server) = &self.server {

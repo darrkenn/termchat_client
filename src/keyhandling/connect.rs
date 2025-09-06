@@ -1,4 +1,4 @@
-use std::{panic, sync::Arc};
+use std::sync::Arc;
 
 use futures::StreamExt;
 use ratatui::crossterm::event::{self, KeyEvent};
@@ -31,45 +31,7 @@ pub fn handle_connect_key(key: KeyEvent, app: &mut App, connect_scene: Connect) 
                     let selection = CONNECT_OPTIONS[i.selected().unwrap()];
                     match selection {
                         "Connect" => {
-                            app.scene = Scene::Connecting;
-                            app.update_scene();
-
-                            let url = get_url(app.msg_buffer.clone());
-                            let server = app.server.clone();
-                            let connection_state = app.connection_state.clone();
-
-                            let (tx, rx) = mpsc::channel::<Message>(12);
-                            app.socket_writer = Some(tx);
-
-                            tokio::spawn(async move {
-                                match connect_async(url).await {
-                                    Ok((socket, _)) => {
-                                        let (ws_w, ws_r) = socket.split();
-
-                                        if let (Some(server), Some(connection_state)) =
-                                            (server, connection_state)
-                                        {
-                                            if let Some(messages) = &server.messages {
-                                                let messages_reader = Arc::clone(messages);
-                                                tokio::spawn(async move {
-                                                    websocket_reader(
-                                                        messages_reader,
-                                                        ws_r,
-                                                        connection_state,
-                                                    )
-                                                    .await;
-                                                });
-                                                tokio::spawn(async move {
-                                                    websocket_writer(ws_w, rx);
-                                                });
-                                            };
-                                        }
-                                    }
-                                    Err(e) => {
-                                        eprintln!("{e}")
-                                    }
-                                }
-                            });
+                            handle_connection(app);
                         }
                         "Info" => {
                             app.scene = Scene::Connect(Connect::Info);
@@ -118,4 +80,39 @@ fn get_url(mut msg_buffer: String) -> String {
     } else {
         msg_buffer
     }
+}
+
+fn handle_connection(app: &mut App) {
+    app.scene = Scene::Connecting;
+    app.update_scene();
+
+    let url = get_url(app.msg_buffer.clone());
+    let server = app.server.clone();
+    let connection_state = app.connection_state.clone();
+
+    let (tx, rx) = mpsc::channel::<Message>(12);
+    app.socket_writer = Some(tx);
+
+    tokio::spawn(async move {
+        match connect_async(url).await {
+            Ok((socket, _)) => {
+                let (ws_w, ws_r) = socket.split();
+
+                if let (Some(server), Some(connection_state)) = (server, connection_state) {
+                    if let Some(messages) = &server.messages {
+                        let messages_reader = Arc::clone(messages);
+                        tokio::spawn(async move {
+                            websocket_reader(messages_reader, ws_r, connection_state).await;
+                        });
+                        tokio::spawn(async move {
+                            websocket_writer(ws_w, rx);
+                        });
+                    };
+                }
+            }
+            Err(e) => {
+                eprintln!("{e}")
+            }
+        }
+    });
 }
