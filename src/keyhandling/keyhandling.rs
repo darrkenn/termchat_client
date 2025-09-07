@@ -22,7 +22,7 @@ pub fn handle_key(key: KeyEvent, app: &mut App) -> bool {
         Scene::Menu => handle_menu_key(key, app),
         Scene::Connect(connect_scene) => handle_connect_key(key, app, connect_scene),
         Scene::Connecting => handle_connecting_key(key, app),
-        Scene::Message => handle_message_key(key),
+        Scene::Message => handle_message_key(key, app),
         Scene::Settings => handle_settings_key(key),
     }
 

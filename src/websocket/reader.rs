@@ -4,6 +4,7 @@ use std::{
 };
 
 use futures::{StreamExt, stream::SplitStream};
+use ratatui::style::Stylize;
 use serde_json::Value;
 use tokio::net::TcpStream;
 use tokio_tungstenite::{MaybeTlsStream, WebSocketStream};
@@ -43,12 +44,22 @@ pub async fn websocket_reader(
                                 let mut conn = connection_state.lock().unwrap();
                                 *conn = Connection::Error("Could not be authenticated".to_string());
                             }
+                            Some("message") => {
+                                let mut msgs = messages.lock().unwrap();
+                                let message =
+                                    format!("[SERVER]:{}", json["body"].as_str().unwrap());
+                                msgs.push(message);
+                            }
                             _ => {}
                         },
                         Some("message") => {
-                            if let Some(contents) = json["from"].as_str() {
-                                todo!()
-                            }
+                            let mut msgs = messages.lock().unwrap();
+                            let message = format!(
+                                "[{}]:{}",
+                                json["from"].as_str().unwrap(),
+                                json["body"].as_str().unwrap()
+                            );
+                            msgs.push(message);
                         }
                         _ => {}
                     }

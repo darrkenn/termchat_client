@@ -29,7 +29,7 @@ pub fn render(frame: &mut Frame, app: &mut App) {
             if let Some(server) = app.server.as_ref() {
                 if let Some(messages) = &server.messages {
                     let msgs = messages.lock().unwrap();
-                    render_message_area(frame, area, &msgs[..], &mut app.msg_buffer);
+                    render_message_area(frame, area, &msgs[..], app.msg_buffer.clone());
                 }
             }
         }
