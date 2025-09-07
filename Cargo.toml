@@ -24,3 +24,11 @@ debug-assertions = false
 overflow-checks = false
 rpath = false
 incremental = false
+
+[profile.dev]
+opt-level = 0
+debug = true
+split-debuginfo = "unpacked"
+incremental = true
+codegen-units = 256
+lto = false

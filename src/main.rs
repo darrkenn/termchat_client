@@ -3,10 +3,7 @@ mod keyhandling;
 mod render;
 mod run;
 mod websocket;
-use std::{
-    process,
-    sync::{Arc, Mutex},
-};
+use std::process;
 
 use ratatui::{
     crossterm,
@@ -14,8 +11,6 @@ use ratatui::{
 };
 
 use crate::app::{App, Scene};
-
-type Messages = Arc<Mutex<Vec<String>>>;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -26,6 +21,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         connection_state: None,
         msg_buffer: "".to_string(),
         server: None,
+        socket_writer: None,
     };
 
     app.update_scene();
