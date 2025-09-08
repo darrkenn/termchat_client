@@ -129,7 +129,9 @@ impl App<'_> {
             }
             Scene::Message => {
                 self.list = None;
-                self.list_state = None;
+                if let Some(list_state) = self.list_state.as_mut() {
+                    list_state.select(None);
+                };
 
                 if let Some(server) = self.server.as_mut() {
                     server.messages = Some(Arc::new(Mutex::new(Vec::new())));

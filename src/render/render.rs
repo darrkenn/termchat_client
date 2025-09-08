@@ -1,6 +1,7 @@
 use ratatui::{
     Frame,
     layout::{Constraint, Direction, Flex, Layout, Rect},
+    widgets::ListState,
 };
 
 use crate::{
@@ -29,7 +30,20 @@ pub fn render(frame: &mut Frame, app: &mut App) {
             if let Some(server) = app.server.as_ref() {
                 if let Some(messages) = &server.messages {
                     let msgs = messages.lock().unwrap();
-                    render_message_area(frame, area, &msgs[..], app.msg_buffer.clone());
+                    let mut list_state = if let Some(list_state) = app.list_state {
+                        list_state
+                    } else {
+                        let mut list_state = ListState::default();
+                        list_state.select(None);
+                        list_state
+                    };
+                    render_message_area(
+                        frame,
+                        area,
+                        &msgs[..],
+                        app.msg_buffer.clone(),
+                        &mut list_state,
+                    );
                 }
             }
         }
