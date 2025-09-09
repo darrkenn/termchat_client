@@ -56,10 +56,19 @@ pub async fn websocket_reader(
                             let mut msgs = messages.lock().unwrap();
                             let message = format!(
                                 "[{}]:{}",
-                                json["from"].as_str().unwrap(),
-                                json["body"].as_str().unwrap()
+                                json["from"].as_str().unwrap_or(""),
+                                json["body"].as_str().unwrap_or("")
                             );
                             msgs.push(message);
+                        }
+                        Some("priv_msg") => {
+                            let mut msgs = messages.lock().unwrap();
+                            let message = format!(
+                                "Private message from [{}]: {}",
+                                json["sender"].as_str().unwrap_or("???"),
+                                json["body"].as_str().unwrap_or("???")
+                            );
+                            msgs.push(message)
                         }
                         _ => {}
                     }
