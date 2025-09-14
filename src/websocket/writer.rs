@@ -9,7 +9,7 @@ pub async fn websocket_writer(
 ) {
     loop {
         if let Some(msg) = rx.recv().await {
-            ws_w.send(msg).await;
+            _ = ws_w.send(msg).await;
         }
     }
 }

@@ -2,6 +2,7 @@ mod connect_area;
 mod connecting_area;
 mod menu_area;
 mod message_area;
+mod popup;
 pub mod render;
 mod settings_area;
 

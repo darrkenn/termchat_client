@@ -1,14 +1,14 @@
 use ratatui::{
     Frame,
-    layout::{Constraint, Direction, Layout, Rect},
+    layout::{Constraint, Rect},
     style::{Color, Style},
     text::Line,
-    widgets::{Block, BorderType, Borders, Paragraph, Wrap},
+    widgets::{Block, Paragraph, Wrap},
 };
 
 use crate::{
     app::{App, Connection, Scene},
-    render::render::center,
+    render::{popup::render_popup, render::center},
 };
 
 pub fn render_connecting(frame: &mut Frame, area: Rect, app: &mut App) {
@@ -44,7 +44,7 @@ pub fn render_connecting(frame: &mut Frame, area: Rect, app: &mut App) {
                 app.scene = Scene::Message;
             }
             Connection::Error(e) => {
-                todo!("{e}")
+                render_popup(frame, area, &e);
             }
             _ => {}
         }
