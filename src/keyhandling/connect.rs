@@ -1,4 +1,4 @@
-use std::{panic, sync::Arc};
+use std::sync::Arc;
 
 use futures::StreamExt;
 use ratatui::crossterm::event::{self, KeyEvent};
@@ -83,7 +83,7 @@ fn get_url(mut msg_buffer: String) -> String {
     }
 }
 
-fn handle_connection(app: &mut App) {
+pub fn handle_connection(app: &mut App) {
     app.scene = Scene::Connecting;
     app.update_scene();
 

@@ -1,12 +1,16 @@
-use std::sync::{Arc, Mutex};
+use std::{
+    fs,
+    sync::{Arc, Mutex},
+};
 
 use ratatui::{
     layout::Alignment,
     text::Line,
-    widgets::{ListItem, ListState},
+    widgets::{List, ListItem, ListState},
 };
 use reqwest::header::CONTENT_TYPE;
 use serde::Deserialize;
+use serde_json::Value;
 use tokio::sync::mpsc;
 use tungstenite::Message;
 
@@ -22,6 +26,7 @@ pub enum Connection {
 #[derive(Clone)]
 pub enum Scene {
     Menu,
+    Saved,
     Settings,
     Connect(Connect),
     Connecting,
@@ -67,10 +72,27 @@ impl App<'_> {
                     ListItem::from(Line::from("Saved ").alignment(Alignment::Center)),
                     ListItem::from(Line::from(" Settings").alignment(Alignment::Center)),
                 ]);
+                self.list_state = Some(ListState::default());
                 if let Some(list_state) = self.list_state.as_mut() {
                     list_state.select_first();
-                };
+                }
                 self.server = None;
+            }
+            Scene::Saved => {
+                if let Ok(data) = fs::read_to_string("/etc/termchat/client/servers.json") {
+                    if let Ok(value) = serde_json::from_str::<Value>(&data) {
+                        let servers: Vec<String> = serde_json::from_value(value["servers"].clone())
+                            .expect("Couldnt get servers");
+
+                        let items: Vec<ListItem> =
+                            servers.into_iter().map(|s| ListItem::new(s)).collect();
+                        self.list = Some(items);
+                        self.list_state = Some(ListState::default());
+                        if let Some(list_state) = self.list_state.as_mut() {
+                            list_state.select_first();
+                        }
+                    }
+                }
             }
             Scene::Settings => {
                 self.list = Some(vec![ListItem::from(

@@ -81,13 +81,17 @@ pub async fn websocket_reader(
                 }
             }
             Ok(Message::Close(_)) => {
-                panic!("Closed");
+                let mut conn = connection_state.lock().unwrap();
+                *conn = Connection::Close;
+                break;
             }
-            Ok(ok) => {
-                panic!("{ok}");
+            Ok(_) => {
+                let mut conn = connection_state.lock().unwrap();
+                *conn = Connection::Close;
             }
-            Err(e) => {
-                panic!("{e}");
+            Err(_) => {
+                let mut conn = connection_state.lock().unwrap();
+                *conn = Connection::Close;
             }
         }
     }

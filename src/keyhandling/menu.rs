@@ -24,6 +24,10 @@ pub fn handle_menu_key(key: KeyEvent, app: &mut App) {
                         app.scene = Scene::Connect(Connect::Menu);
                         app.update_scene();
                     }
+                    "Saved" => {
+                        app.scene = Scene::Saved;
+                        app.update_scene();
+                    }
                     "Settings" => {
                         app.scene = Scene::Settings;
                         app.update_scene();

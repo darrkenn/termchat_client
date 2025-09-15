@@ -5,11 +5,11 @@ use ratatui::{
 };
 
 use crate::{
-    app::{App, Scene},
+    app::{App, Connection, Scene},
     render::{
         connect_area::render_connect_area, connecting_area::render_connecting,
-        menu_area::render_menu_area, message_area::render_message_area,
-        settings_area::render_settings_area,
+        menu_area::render_menu_area, message_area::render_message_area, popup::render_popup,
+        saved::render_saved_area, settings_area::render_settings_area,
     },
 };
 
@@ -24,26 +24,43 @@ pub fn render(frame: &mut Frame, app: &mut App) {
     let scene = app.scene.clone();
     match scene {
         Scene::Menu => render_menu_area(frame, inner_area, app),
+        Scene::Saved => render_saved_area(frame, inner_area, app),
         Scene::Settings => render_settings_area(frame, inner_area),
         Scene::Connect(connect_scene) => render_connect_area(frame, inner_area, app, connect_scene),
         Scene::Message => {
-            if let Some(server) = app.server.as_ref() {
-                if let Some(messages) = &server.messages {
-                    let msgs = messages.lock().unwrap();
-                    let mut list_state = if let Some(list_state) = app.list_state {
-                        list_state
-                    } else {
-                        let mut list_state = ListState::default();
-                        list_state.select(None);
-                        list_state
-                    };
-                    render_message_area(
-                        frame,
-                        area,
-                        &msgs[..],
-                        app.msg_buffer.clone(),
-                        &mut list_state,
-                    );
+            let connection_state = app
+                .connection_state
+                .as_ref()
+                .map(|cs| cs.lock().unwrap().clone());
+            if let Some(connection_state) = connection_state {
+                match connection_state {
+                    Connection::Connected => {
+                        if let Some(server) = app.server.as_ref() {
+                            if let Some(messages) = &server.messages {
+                                let msgs = messages.lock().unwrap();
+                                let mut list_state = if let Some(list_state) = app.list_state {
+                                    list_state
+                                } else {
+                                    let mut list_state = ListState::default();
+                                    list_state.select(None);
+                                    list_state
+                                };
+                                render_message_area(
+                                    frame,
+                                    area,
+                                    &msgs[..],
+                                    app.msg_buffer.clone(),
+                                    &mut list_state,
+                                );
+                            }
+                        }
+                    }
+                    Connection::Close => {
+                        let area =
+                            center(area, Constraint::Percentage(30), Constraint::Percentage(50));
+                        render_popup(frame, area, "Connection closed");
+                    }
+                    _ => {}
                 }
             }
         }
