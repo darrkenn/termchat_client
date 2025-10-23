@@ -92,7 +92,6 @@ pub fn handle_connection(app: &mut App) {
     let connection_state = app.connection_state.clone();
 
     let (tx, rx) = mpsc::channel::<Message>(12);
-    app.socket_writer = Some(tx);
 
     tokio::spawn(async move {
         match connect_async(url).await {

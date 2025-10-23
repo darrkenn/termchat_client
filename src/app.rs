@@ -21,6 +21,7 @@ pub enum Connection {
     Request(String),
     Error(String),
     Close,
+    None,
 }
 
 #[derive(Clone)]
@@ -42,10 +43,11 @@ pub struct App<'a> {
     pub scene: Scene,
     pub list_state: Option<ListState>,
     pub list: Option<Vec<ListItem<'a>>>,
-    pub connection_state: Option<Arc<Mutex<Connection>>>,
+    pub connection_state: Arc<Mutex<Connection>>,
     pub msg_buffer: String,
     pub server: Option<Server>,
-    pub socket_writer: Option<mpsc::Sender<Message>>,
+    pub socket_writer: mpsc::Sender<Message>,
+    pub messages: Arc<Mutex<Vec<String>>>,
 }
 
 #[derive(Clone, Debug)]
@@ -147,7 +149,7 @@ impl App<'_> {
                         ip: Some(self.msg_buffer.clone()),
                     });
                 }
-                self.connection_state = Some(Arc::new(Mutex::new(Connection::Connecting)));
+                self.connection_state = Arc::new(Mutex::new(Connection::Connecting));
             }
             Scene::Message => {
                 self.list = None;
