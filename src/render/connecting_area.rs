@@ -1,24 +1,26 @@
 use ratatui::{
     Frame,
-    layout::{Constraint, Direction, Layout, Rect},
+    layout::{Constraint, Rect},
     style::{Color, Style},
     text::Line,
-    widgets::{Block, BorderType, Borders, Paragraph, Wrap},
+    widgets::{Block, Paragraph, Wrap},
 };
 
 use crate::{
     app::{App, Connection, Scene},
-    render::render::center,
+    render::{popup::render_popup, render::center},
 };
 
 pub fn render_connecting(frame: &mut Frame, area: Rect, app: &mut App) {
     let area = center(area, Constraint::Percentage(30), Constraint::Percentage(50));
-
     let input_area = center(area, Constraint::Percentage(70), Constraint::Percentage(10));
 
-    if let Some(connection_state) = app.connection_state.as_ref() {
-        let mutex_guard = connection_state.lock().unwrap();
-        let connection_state = mutex_guard.clone();
+    let connection_state = app
+        .connection_state
+        .as_ref()
+        .map(|cs| cs.lock().unwrap().clone());
+
+    if let Some(connection_state) = connection_state {
         match connection_state {
             Connection::Request(request) => match request.as_str() {
                 "username" => {
@@ -37,14 +39,11 @@ pub fn render_connecting(frame: &mut Frame, area: Rect, app: &mut App) {
                 }
                 _ => {}
             },
-            Connection::Close => {
-                todo!()
-            }
             Connection::Connected => {
                 app.scene = Scene::Message;
             }
             Connection::Error(e) => {
-                todo!("{e}")
+                render_popup(frame, area, &e);
             }
             _ => {}
         }

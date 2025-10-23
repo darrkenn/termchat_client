@@ -39,29 +39,59 @@ pub async fn websocket_reader(
                                 let mut conn = connection_state.lock().unwrap();
                                 *conn = Connection::Connected;
                             }
-                            Some("not-authenticated") => {
-                                let mut conn = connection_state.lock().unwrap();
-                                *conn = Connection::Error("Could not be authenticated".to_string());
+                            Some("unauthenticated") => match json["message"].as_str() {
+                                Some("Incorrect password") => {
+                                    let mut conn = connection_state.lock().unwrap();
+                                    *conn = Connection::Error("Incorrect password".to_string());
+                                }
+                                _ => {}
+                            },
+                            Some("message") => {
+                                let mut msgs = messages.lock().unwrap();
+                                let message =
+                                    format!("[SERVER]:{}", json["body"].as_str().unwrap());
+                                msgs.push(message);
+                            }
+                            Some("clear") => {
+                                let mut msgs = messages.lock().unwrap();
+                                msgs.clear();
                             }
                             _ => {}
                         },
                         Some("message") => {
-                            if let Some(contents) = json["from"].as_str() {
-                                todo!()
-                            }
+                            let mut msgs = messages.lock().unwrap();
+                            let message = format!(
+                                "[{}]:{}",
+                                json["from"].as_str().unwrap_or(""),
+                                json["body"].as_str().unwrap_or("")
+                            );
+                            msgs.push(message);
+                        }
+                        Some("priv_msg") => {
+                            let mut msgs = messages.lock().unwrap();
+                            let message = format!(
+                                "Private message from [{}]: {}",
+                                json["sender"].as_str().unwrap_or("???"),
+                                json["body"].as_str().unwrap_or("???")
+                            );
+                            msgs.push(message)
                         }
                         _ => {}
                     }
                 }
             }
             Ok(Message::Close(_)) => {
-                panic!("Closed");
+                let mut conn = connection_state.lock().unwrap();
+                *conn = Connection::Close;
+                break;
             }
-            Ok(ok) => {
-                panic!("{ok}");
+            Ok(_) => {
+                let mut conn = connection_state.lock().unwrap();
+                *conn = Connection::Close;
             }
-            Err(e) => {
-                panic!("{e}");
+            Err(_) => {
+                let mut conn = connection_state.lock().unwrap();
+                *conn = Connection::Close;
             }
         }
     }
