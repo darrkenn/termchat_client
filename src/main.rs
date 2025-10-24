@@ -1,14 +1,18 @@
 mod app;
 mod run;
 mod websocket;
+use core::time;
 use std::{
-    env, process,
+    env,
+    io::{self, Write},
+    process,
     sync::{Arc, Mutex},
 };
 
 use futures::StreamExt;
 use ratatui::{crossterm, widgets::ListItem};
-use tokio::sync::mpsc;
+use serde_json::json;
+use tokio::sync::mpsc::{self, Sender};
 use tokio_tungstenite::connect_async;
 use tungstenite::Message;
 
@@ -17,8 +21,27 @@ use crate::{
     websocket::{websocket_reader, websocket_writer},
 };
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+pub fn setup_logger() -> Result<(), fern::InitError> {
+    fern::Dispatch::new()
+        .level(log::LevelFilter::Debug)
+        .chain(std::io::stdout())
+        .chain(fern::log_file("output.log")?)
+        .format(|out, message, record| {
+            out.finish(format_args!(
+                "[{}][{}] {}",
+                record.target(),
+                record.level(),
+                message
+            ))
+        })
+        .apply()?;
+    Ok(())
+}
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<String> = env::args().skip(1).collect();
+    setup_logger().expect("uhoh");
 
     if !args.is_empty() {
         let command = args[0].as_str();
@@ -27,7 +50,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             "--connect" => {
                 if args.len() > 1 {
                     let url = args[1].as_str();
-                    connect(url.to_string());
+
+                    let mut app = connect(get_url(url.to_string())).await;
+                    check_connection(&mut app);
                 } else {
                     println!("termchat: Destination required")
                 }
@@ -53,7 +78,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     process::exit(0);
 }
 
-fn connect(url: String) {
+async fn connect(url: String) -> App<'static> {
     println!("Connecting to {url}");
 
     let (tx, rx) = mpsc::channel::<Message>(1);
@@ -69,26 +94,112 @@ fn connect(url: String) {
         messages: Arc::new(Mutex::new(Vec::<String>::new())),
     };
 
+    let messages_reader = Arc::clone(&app.messages);
+    let connection_state = Arc::clone(&app.connection_state);
+
     tokio::spawn(async move {
         match connect_async(url.clone()).await {
             Ok((socket, _)) => {
-                let messages_reader = Arc::clone(&app.messages);
                 let (ws_w, ws_r) = socket.split();
                 tokio::spawn(async move {
-                    websocket_reader(messages_reader, ws_r, app.connection_state).await;
+                    websocket_reader(messages_reader, ws_r, connection_state).await;
                 });
                 tokio::spawn(async move {
                     websocket_writer(ws_w, rx).await;
                 });
             }
             Err(e) => {
-                println!("Couldn't connect to url");
-                process::exit(0)
+                let mut connection_state = connection_state.lock().unwrap();
+                *connection_state = Connection::Error(e.to_string());
             }
         }
     });
+
+    app
+}
+
+fn check_connection(app: &mut App) {
+    loop {
+        let connection_state = app.connection_state.lock().unwrap().clone();
+        match connection_state {
+            Connection::Request(ref r) => match r.as_str() {
+                "username" => {
+                    let mut username = String::new();
+                    let writer = &app.socket_writer;
+                    print!("Username: ");
+                    io::stdout().flush().expect("Couldnt flush stdout");
+                    io::stdin()
+                        .read_line(&mut username)
+                        .expect("Couldnt read stdin");
+                    send_login(username, writer);
+                    std::thread::sleep(time::Duration::from_millis(100));
+                }
+                "password" => {
+                    let mut password = String::new();
+                    let writer = &app.socket_writer;
+                    print!("Password: ");
+                    io::stdout().flush().expect("Couldnt flush stdout");
+                    io::stdin()
+                        .read_line(&mut password)
+                        .expect("Couldnt read stdin");
+                    send_login(password, writer);
+                    std::thread::sleep(time::Duration::from_millis(100));
+                }
+                _ => {
+                    print!("h")
+                }
+            },
+            Connection::Error(e) => {
+                eprintln!("termchat: error: {e}");
+                process::exit(1);
+            }
+            Connection::Connecting => {
+                println!("Connectiong");
+            }
+            Connection::Close => {
+                println!("termchat: connection closed");
+                process::exit(0);
+            }
+            Connection::None => {
+                println!("h");
+            }
+            Connection::Connected => {
+                println!("connection");
+            }
+        }
+        std::thread::sleep(time::Duration::from_millis(100));
+    }
 }
 
 fn get_info(url: &str) {
     println!("termchat: Getting info from {url}")
+}
+
+fn get_url(mut url: String) -> String {
+    if url.starts_with("ws://") || url.starts_with("wss://") {
+    } else if url.starts_with("http://") {
+        url = url.replace("http://", "ws://");
+    } else if url.starts_with("https://") {
+        url = url.replace("https://", "wss://");
+    };
+    if url.ends_with("/") {
+        url.push_str("chat");
+        url
+    } else if !url.ends_with("/chat") {
+        url.push_str("/chat");
+        url
+    } else {
+        url
+    }
+}
+
+fn send_login(data: String, writer: &Sender<Message>) {
+    let json_message = json!({
+        "type": "response",
+        "value": data
+    });
+
+    let message = Message::Text(json_message.to_string().into());
+
+    _ = writer.try_send(message);
 }
