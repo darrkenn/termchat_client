@@ -34,9 +34,6 @@ pub async fn websocket_reader(
                                     Connection::None => {
                                         info!(target: "reader", "Connection state is none")
                                     }
-                                    Connection::Connecting => {
-                                        info!(target: "reader", "Connection state is connecting")
-                                    }
                                     _ => {}
                                 }
                             }

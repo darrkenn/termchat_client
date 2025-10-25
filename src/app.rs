@@ -1,51 +1,24 @@
-use std::{
-    fs,
-    sync::{Arc, Mutex},
-};
+use std::sync::{Arc, Mutex};
 
-use ratatui::{
-    layout::Alignment,
-    text::Line,
-    widgets::{List, ListItem, ListState},
-};
+use ratatui::widgets::ListState;
 use reqwest::header::CONTENT_TYPE;
 use serde::Deserialize;
-use serde_json::Value;
 use tokio::sync::mpsc;
 use tungstenite::Message;
 
 #[derive(Clone, Debug)]
 pub enum Connection {
     Connected,
-    Connecting,
     Request(String),
     Error(String),
     Close,
     None,
 }
 
-#[derive(Clone)]
-pub enum Scene {
-    Menu,
-    Saved,
-    Settings,
-    Connect(Connect),
-    Connecting,
-    Message,
-}
-#[derive(Clone)]
-pub enum Connect {
-    Menu,
-    Info,
-}
-
-pub struct App<'a> {
-    pub scene: Scene,
-    pub list_state: Option<ListState>,
-    pub list: Option<Vec<ListItem<'a>>>,
+pub struct App {
+    pub list_state: ListState,
     pub connection_state: Arc<Mutex<Connection>>,
     pub msg_buffer: String,
-    pub server: Option<Server>,
     pub socket_writer: mpsc::Sender<Message>,
     pub messages: Arc<Mutex<Vec<String>>>,
 }
@@ -63,106 +36,6 @@ pub struct Info {
     pub description: String,
     pub language: String,
     pub tags: Vec<String>,
-}
-
-impl App<'_> {
-    pub fn update_scene(&mut self) {
-        match &self.scene {
-            Scene::Menu => {
-                self.list = Some(vec![
-                    ListItem::from(Line::from(" Connect ").alignment(Alignment::Center)),
-                    ListItem::from(Line::from("Saved ").alignment(Alignment::Center)),
-                    ListItem::from(Line::from(" Settings").alignment(Alignment::Center)),
-                ]);
-                self.list_state = Some(ListState::default());
-                if let Some(list_state) = self.list_state.as_mut() {
-                    list_state.select_first();
-                }
-                self.server = None;
-            }
-            Scene::Saved => {
-                if let Ok(data) = fs::read_to_string("/etc/termchat/client/servers.json") {
-                    if let Ok(value) = serde_json::from_str::<Value>(&data) {
-                        let servers: Vec<String> = serde_json::from_value(value["servers"].clone())
-                            .expect("Couldnt get servers");
-
-                        let items: Vec<ListItem> =
-                            servers.into_iter().map(|s| ListItem::new(s)).collect();
-                        self.list = Some(items);
-                        self.list_state = Some(ListState::default());
-                        if let Some(list_state) = self.list_state.as_mut() {
-                            list_state.select_first();
-                        }
-                    }
-                }
-            }
-            Scene::Settings => {
-                self.list = Some(vec![ListItem::from(
-                    Line::from("Manage saved").alignment(Alignment::Center),
-                )]);
-                if let Some(list_state) = self.list_state.as_mut() {
-                    list_state.select_first();
-                };
-            }
-            Scene::Connect(connect_scene) => match connect_scene {
-                Connect::Menu => {
-                    self.list = Some(vec![
-                        ListItem::from(Line::from("Connect").alignment(Alignment::Center)),
-                        ListItem::from(Line::from("Info  ").alignment(Alignment::Center)),
-                    ]);
-                    if let Some(list_state) = self.list_state.as_mut() {
-                        list_state.select_first();
-                    };
-                }
-                Connect::Info => {
-                    let info = Info {
-                        name: "".to_string(),
-                        description: "".to_string(),
-                        language: "".to_string(),
-                        tags: Vec::new(),
-                    };
-                    self.server = Some(Server {
-                        info: Some(Arc::new(Mutex::new(info))),
-                        messages: Some(Arc::new(Mutex::new(Vec::<String>::new()))),
-                        ip: Some(self.msg_buffer.clone()),
-                    });
-                    if let Some(server) = &self.server {
-                        let server_info = Arc::clone(server.info.as_ref().unwrap());
-                        let ip = server.ip.clone().unwrap();
-                        tokio::spawn(async move { make_info_request(server_info, ip).await });
-                    }
-                }
-            },
-            Scene::Connecting => {
-                self.list = None;
-                self.list_state = None;
-                if !self.server.is_some() {
-                    let info = Info {
-                        name: "".to_string(),
-                        description: "".to_string(),
-                        language: "".to_string(),
-                        tags: Vec::new(),
-                    };
-                    self.server = Some(Server {
-                        info: Some(Arc::new(Mutex::new(info))),
-                        messages: Some(Arc::new(Mutex::new(Vec::<String>::new()))),
-                        ip: Some(self.msg_buffer.clone()),
-                    });
-                }
-                self.connection_state = Arc::new(Mutex::new(Connection::Connecting));
-            }
-            Scene::Message => {
-                self.list = None;
-                if let Some(list_state) = self.list_state.as_mut() {
-                    list_state.select(None);
-                };
-
-                if let Some(server) = self.server.as_mut() {
-                    server.messages = Some(Arc::new(Mutex::new(Vec::new())));
-                }
-            }
-        }
-    }
 }
 
 async fn make_info_request(server_info: Arc<Mutex<Info>>, ip: String) {

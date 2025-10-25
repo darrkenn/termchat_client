@@ -1,4 +1,6 @@
 mod app;
+mod keyhandling;
+mod render;
 mod run;
 mod websocket;
 use core::time;
@@ -10,14 +12,15 @@ use std::{
 };
 
 use futures::StreamExt;
-use ratatui::{crossterm, widgets::ListItem};
+use ratatui::{crossterm, widgets::ListState};
 use serde_json::json;
 use tokio::sync::mpsc::{self, Sender};
 use tokio_tungstenite::connect_async;
 use tungstenite::Message;
 
 use crate::{
-    app::{App, Connection, Scene},
+    app::{App, Connection},
+    run::run,
     websocket::{websocket_reader, websocket_writer},
 };
 
@@ -53,6 +56,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                     let mut app = connect(get_url(url.to_string())).await;
                     check_connection(&mut app);
+                    color_eyre::install()?;
+                    crossterm::terminal::enable_raw_mode()?;
+                    let terminal = ratatui::init();
+                    _ = run(terminal, app);
+                    ratatui::restore();
+                    crossterm::terminal::disable_raw_mode()?;
                 } else {
                     println!("termchat: Destination required")
                 }
@@ -78,18 +87,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     process::exit(0);
 }
 
-async fn connect(url: String) -> App<'static> {
+async fn connect(url: String) -> App {
     println!("Connecting to {url}");
 
     let (tx, rx) = mpsc::channel::<Message>(1);
 
-    let mut app = App {
-        scene: Scene::Menu,
-        list_state: None,
-        list: Some(Vec::<ListItem>::new()),
+    let app = App {
+        list_state: ListState::default(),
         connection_state: Arc::new(Mutex::new(Connection::None)),
         msg_buffer: "".to_string(),
-        server: None,
         socket_writer: tx,
         messages: Arc::new(Mutex::new(Vec::<String>::new())),
     };
@@ -131,7 +137,7 @@ fn check_connection(app: &mut App) {
                     io::stdin()
                         .read_line(&mut username)
                         .expect("Couldnt read stdin");
-                    send_login(username, writer);
+                    send_login(username.trim().to_string(), writer);
                     std::thread::sleep(time::Duration::from_millis(100));
                 }
                 "password" => {
@@ -142,7 +148,7 @@ fn check_connection(app: &mut App) {
                     io::stdin()
                         .read_line(&mut password)
                         .expect("Couldnt read stdin");
-                    send_login(password, writer);
+                    send_login(password.trim().to_string(), writer);
                     std::thread::sleep(time::Duration::from_millis(100));
                 }
                 _ => {
@@ -153,19 +159,15 @@ fn check_connection(app: &mut App) {
                 eprintln!("termchat: error: {e}");
                 process::exit(1);
             }
-            Connection::Connecting => {
-                println!("Connectiong");
-            }
             Connection::Close => {
                 println!("termchat: connection closed");
                 process::exit(0);
             }
-            Connection::None => {
-                println!("h");
-            }
             Connection::Connected => {
-                println!("connection");
+                println!("Successfully connected");
+                break;
             }
+            _ => {}
         }
         std::thread::sleep(time::Duration::from_millis(100));
     }
