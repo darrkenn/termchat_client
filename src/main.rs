@@ -24,27 +24,9 @@ use crate::{
     websocket::{websocket_reader, websocket_writer},
 };
 
-pub fn setup_logger() -> Result<(), fern::InitError> {
-    fern::Dispatch::new()
-        .level(log::LevelFilter::Debug)
-        .chain(std::io::stdout())
-        .chain(fern::log_file("output.log")?)
-        .format(|out, message, record| {
-            out.finish(format_args!(
-                "[{}][{}] {}",
-                record.target(),
-                record.level(),
-                message
-            ))
-        })
-        .apply()?;
-    Ok(())
-}
-
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<String> = env::args().skip(1).collect();
-    setup_logger().expect("uhoh");
 
     if !args.is_empty() {
         let command = args[0].as_str();
@@ -53,6 +35,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             "--connect" => {
                 if args.len() > 1 {
                     let url = args[1].as_str();
+                    println!("Connecting to {url}");
 
                     let mut app = connect(get_url(url.to_string())).await;
                     check_connection(&mut app);
@@ -78,18 +61,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         todo!()
     }
 
-    //color_eyre::install()?;
-    //crossterm::terminal::enable_raw_mode()?;
-    //let terminal = ratatui::init();
-    //_ = run::run(terminal, app);
-    //ratatui::restore();
-    //crossterm::terminal::disable_raw_mode()?;
     process::exit(0);
 }
 
 async fn connect(url: String) -> App {
-    println!("Connecting to {url}");
-
     let (tx, rx) = mpsc::channel::<Message>(1);
 
     let app = App {
@@ -150,6 +125,7 @@ fn check_connection(app: &mut App) {
                         .expect("Couldnt read stdin");
                     send_login(password.trim().to_string(), writer);
                     std::thread::sleep(time::Duration::from_millis(100));
+                    break;
                 }
                 _ => {
                     print!("h")
@@ -164,7 +140,6 @@ fn check_connection(app: &mut App) {
                 process::exit(0);
             }
             Connection::Connected => {
-                println!("Successfully connected");
                 break;
             }
             _ => {}
@@ -183,7 +158,9 @@ fn get_url(mut url: String) -> String {
         url = url.replace("http://", "ws://");
     } else if url.starts_with("https://") {
         url = url.replace("https://", "wss://");
-    };
+    } else {
+        url = format!("ws://{url}");
+    }
     if url.ends_with("/") {
         url.push_str("chat");
         url

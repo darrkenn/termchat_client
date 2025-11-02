@@ -1,7 +1,6 @@
 use std::sync::{Arc, Mutex};
 
 use futures::{StreamExt, stream::SplitStream};
-use log::info;
 use serde_json::Value;
 use tokio::net::TcpStream;
 use tokio_tungstenite::{MaybeTlsStream, WebSocketStream};
@@ -16,7 +15,6 @@ pub async fn websocket_reader(
     mut ws_r: SplitStream<WebSocketStream<MaybeTlsStream<TcpStream>>>,
     connection_state: Arc<Mutex<Connection>>,
 ) {
-    info!(target: "reader", "Started thread");
     while let Some(msg) = ws_r.next().await {
         match msg {
             Ok(Message::Text(text)) => {
@@ -24,18 +22,8 @@ pub async fn websocket_reader(
                     match json["type"].as_str() {
                         Some("request") => match json["reason"].as_str() {
                             Some("username") => {
-                                info!(target: "reader", "Received request for username");
                                 let mut conn = connection_state.lock().unwrap();
                                 *conn = Connection::Request("username".to_string());
-                                match *conn {
-                                    Connection::Request(_) => {
-                                        info!(target: "reader", "Connection state is request")
-                                    }
-                                    Connection::None => {
-                                        info!(target: "reader", "Connection state is none")
-                                    }
-                                    _ => {}
-                                }
                             }
                             Some("password") => {
                                 let mut conn = connection_state.lock().unwrap();
